@@ -11,7 +11,7 @@ const Cart = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/products');
+        const response = await fetch('https://fuel-delivery-backend-ksip.onrender.com/api/products');
         const products = await response.json();
         setAvailableProducts(products);
         console.log('Cart - Available products:', products);

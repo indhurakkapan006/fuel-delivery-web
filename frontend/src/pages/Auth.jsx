@@ -48,7 +48,7 @@ const Auth = () => {
               <label style={styles.label}>Full Name</label>
               <input 
                 type="text" 
-                placeholder="Eesakkimuthu" 
+                placeholder="your name" 
                 required
                 onChange={(e) => setFormData({...formData, username: e.target.value})} 
                 style={styles.input}
@@ -71,7 +71,7 @@ const Auth = () => {
             <label style={styles.label}>Password</label>
             <input 
               type="password" 
-              placeholder="••••••••" 
+              placeholder="" 
               required
               onChange={(e) => setFormData({...formData, password: e.target.value})} 
               style={styles.input}
