@@ -8,7 +8,10 @@ const jwt = require('jsonwebtoken');
 dotenv.config();
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: 'https://fuel-delivery-frontend-hrkaa7yo0-esakkimuthus-projects.vercel.app', //Vercel URL
+  credentials: true
+}));
 
 // --- DATABASE CONNECTION ---
 const db = mysql.createPool({
