@@ -8,8 +8,22 @@ const jwt = require('jsonwebtoken');
 dotenv.config();
 const app = express();
 app.use(express.json());
+// Add both your project URL and the specific project instance URL
+const allowedOrigins = [
+  'https://fuel-delivery-frontend.vercel.app',
+  'https://fuel-delivery-frontend-hrkaa7yo0-esakkimuthus-projects.vercel.app',
+  'http://localhost:5174' // Keeping local dev support
+];
+
 app.use(cors({
-  origin: 'https://fuel-delivery-frontend-hrkaa7yo0-esakkimuthus-projects.vercel.app', //Vercel URL
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error('CORS policy violation'), false);
+    }
+    return callback(null, true);
+  },
   credentials: true
 }));
 
