@@ -5,30 +5,47 @@ import { useNavigate } from 'react-router-dom';
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     try {
       if (isLogin) {
         // --- LOGIN LOGIC ---
         const res = await loginUser({ email: formData.email, password: formData.password });
-        
+
         // Save user data for orders and session management
         localStorage.setItem('token', res.data.token);
         localStorage.setItem('email', formData.email);
         localStorage.setItem('username', res.data.username);
-        
+
         alert("Welcome back, " + res.data.username + "!");
-        navigate('/'); 
+        navigate('/');
       } else {
         // --- SIGNUP LOGIC ---
         const res = await signupUser(formData);
         alert(res.data.message || "Account created! Please login.");
-        setIsLogin(true); 
+        setIsLogin(true);
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Auth error. Check your backend server.");
+      const status = err.response?.status;
+      const serverMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Auth error. Check your backend server.';
+
+      if (status === 400) {
+        if (serverMsg.toLowerCase().includes('email')) {
+          setError('This email is already registered. Try logging in or use a different email.');
+        } else if (serverMsg.toLowerCase().includes('wrong password')) {
+          setError('Incorrect password. Try again or reset your password.');
+        } else if (serverMsg.toLowerCase().includes('invalid user')) {
+          setError('No account found with this email. Please sign up.');
+        } else {
+          setError(serverMsg);
+        }
+      } else {
+        setError(serverMsg);
+      }
     }
   };
 
@@ -42,6 +59,12 @@ const Auth = () => {
           </p>
         </div>
 
+        {error && (
+          <div style={{ background: '#ffe6e6', color: '#a00', padding: '10px', borderRadius: '6px', marginBottom: '12px' }}>
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} style={styles.form}>
           {!isLogin && (
             <div style={styles.inputGroup}>
@@ -50,7 +73,7 @@ const Auth = () => {
                 type="text" 
                 placeholder="your name" 
                 required
-                onChange={(e) => setFormData({...formData, username: e.target.value})} 
+                onChange={(e) => { setFormData({...formData, username: e.target.value}); setError(''); }} 
                 style={styles.input}
               />
             </div>
@@ -62,7 +85,7 @@ const Auth = () => {
               type="email" 
               placeholder="name@example.com" 
               required
-              onChange={(e) => setFormData({...formData, email: e.target.value})} 
+              onChange={(e) => { setFormData({...formData, email: e.target.value}); setError(''); }} 
               style={styles.input}
             />
           </div>
@@ -73,7 +96,7 @@ const Auth = () => {
               type="password" 
               placeholder="" 
               required
-              onChange={(e) => setFormData({...formData, password: e.target.value})} 
+              onChange={(e) => { setFormData({...formData, password: e.target.value}); setError(''); }} 
               style={styles.input}
             />
           </div>
@@ -85,7 +108,7 @@ const Auth = () => {
                 <input 
                   type="tel" 
                   placeholder="+91 9876543210" 
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})} 
+                  onChange={(e) => { setFormData({...formData, phone: e.target.value}); setError(''); }} 
                   style={styles.input}
                 />
               </div>
@@ -94,7 +117,7 @@ const Auth = () => {
                 <label style={styles.label}>Delivery Address (Optional)</label>
                 <textarea 
                   placeholder="Enter your full delivery address" 
-                  onChange={(e) => setFormData({...formData, address: e.target.value})} 
+                  onChange={(e) => { setFormData({...formData, address: e.target.value}); setError(''); }} 
                   style={{...styles.input, height: '80px', resize: 'vertical'}}
                 />
               </div>
@@ -109,7 +132,7 @@ const Auth = () => {
         <div style={styles.footer}>
           <p style={styles.toggleText}>
             {isLogin ? "Don't have an account?" : "Already have an account?"} 
-            <span onClick={() => setIsLogin(!isLogin)} style={styles.toggleLink}>
+            <span onClick={() => { setIsLogin(!isLogin); setError(''); }} style={styles.toggleLink}>
               {isLogin ? ' Sign up now' : ' Log in here'}
             </span>
           </p>
