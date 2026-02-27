@@ -6,11 +6,13 @@ const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     try {
       if (isLogin) {
         // --- LOGIN LOGIC ---
@@ -21,13 +23,28 @@ const Auth = () => {
         localStorage.setItem('email', formData.email);
         localStorage.setItem('username', res.data.username);
 
-        alert("Welcome back, " + res.data.username + "!");
-        navigate('/');
+        setSuccess(`Welcome back, ${res.data.username}! Redirecting you now…`);
+        setTimeout(() => navigate('/'), 900);
       } else {
         // --- SIGNUP LOGIC ---
         const res = await signupUser(formData);
-        alert(res.data.message || "Account created! Please login.");
-        setIsLogin(true);
+        const msg = res.data.message || "Account created successfully! Logging you in…";
+        setSuccess(msg);
+        
+        // Auto-login after signup
+        setTimeout(async () => {
+          try {
+            const loginRes = await loginUser({ email: formData.email, password: formData.password });
+            localStorage.setItem('token', loginRes.data.token);
+            localStorage.setItem('email', formData.email);
+            localStorage.setItem('username', loginRes.data.username);
+            navigate('/');
+          } catch (loginErr) {
+            console.error('Auto-login failed:', loginErr);
+            setIsLogin(true);
+            setSuccess('');
+          }
+        }, 800);
       }
     } catch (err) {
       const status = err.response?.status;
@@ -35,11 +52,11 @@ const Auth = () => {
 
       if (status === 400) {
         if (serverMsg.toLowerCase().includes('email')) {
-          setError('This email is already registered. Try logging in or use a different email.');
+          setError("Looks like this email is already registered. Try signing in, or use a different email.");
         } else if (serverMsg.toLowerCase().includes('wrong password')) {
-          setError('Incorrect password. Try again or reset your password.');
+          setError('Incorrect password — try again, or reset your password if you forgot it.');
         } else if (serverMsg.toLowerCase().includes('invalid user')) {
-          setError('No account found with this email. Please sign up.');
+          setError('No account found for this email. Create an account to get started.');
         } else {
           setError(serverMsg);
         }
@@ -59,9 +76,15 @@ const Auth = () => {
           </p>
         </div>
 
+        {success && (
+          <div style={{ background: '#e6ffea', color: '#08660b', padding: '10px', borderRadius: '6px', marginBottom: '12px', fontWeight: '500' }}>
+            ✓ {success}
+          </div>
+        )}
+
         {error && (
-          <div style={{ background: '#ffe6e6', color: '#a00', padding: '10px', borderRadius: '6px', marginBottom: '12px' }}>
-            {error}
+          <div style={{ background: '#ffe6e6', color: '#a00', padding: '10px', borderRadius: '6px', marginBottom: '12px', fontWeight: '500' }}>
+            ⚠ {error}
           </div>
         )}
 
@@ -73,7 +96,7 @@ const Auth = () => {
                 type="text" 
                 placeholder="your name" 
                 required
-                onChange={(e) => { setFormData({...formData, username: e.target.value}); setError(''); }} 
+                onChange={(e) => { setFormData({...formData, username: e.target.value}); setError(''); setSuccess(''); }} 
                 style={styles.input}
               />
             </div>
@@ -85,9 +108,9 @@ const Auth = () => {
               type="email" 
               placeholder="name@example.com" 
               required
-              onChange={(e) => { setFormData({...formData, email: e.target.value}); setError(''); }} 
-              style={styles.input}
-            />
+            onChange={(e) => { setFormData({...formData, email: e.target.value}); setError(''); setSuccess(''); }} 
+            style={styles.input}
+          />
           </div>
           
           <div style={styles.inputGroup}>
@@ -96,7 +119,7 @@ const Auth = () => {
               type="password" 
               placeholder="" 
               required
-              onChange={(e) => { setFormData({...formData, password: e.target.value}); setError(''); }} 
+              onChange={(e) => { setFormData({...formData, password: e.target.value}); setError(''); setSuccess(''); }}
               style={styles.input}
             />
           </div>
@@ -108,16 +131,16 @@ const Auth = () => {
                 <input 
                   type="tel" 
                   placeholder="+91 9876543210" 
-                  onChange={(e) => { setFormData({...formData, phone: e.target.value}); setError(''); }} 
-                  style={styles.input}
-                />
+                onChange={(e) => { setFormData({...formData, phone: e.target.value}); setError(''); setSuccess(''); }} 
+                style={styles.input}
+              />
               </div>
               
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Delivery Address (Optional)</label>
                 <textarea 
                   placeholder="Enter your full delivery address" 
-                  onChange={(e) => { setFormData({...formData, address: e.target.value}); setError(''); }} 
+                  onChange={(e) => { setFormData({...formData, address: e.target.value}); setError(''); setSuccess(''); }}
                   style={{...styles.input, height: '80px', resize: 'vertical'}}
                 />
               </div>
@@ -132,7 +155,7 @@ const Auth = () => {
         <div style={styles.footer}>
           <p style={styles.toggleText}>
             {isLogin ? "Don't have an account?" : "Already have an account?"} 
-            <span onClick={() => { setIsLogin(!isLogin); setError(''); }} style={styles.toggleLink}>
+            <span onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); }} style={styles.toggleLink}>
               {isLogin ? ' Sign up now' : ' Log in here'}
             </span>
           </p>
