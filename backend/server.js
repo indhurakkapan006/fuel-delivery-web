@@ -37,14 +37,75 @@ const db = mysql.createPool({
   ssl: { rejectUnauthorized: false },
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  multipleStatements: true // allow running several SQL commands in one query
 });
 db.getConnection((err, connection) => {
   if (err) {
     console.error("❌ DATABASE CONNECTION FAILED:", err.code, err.message);
   } else {
     console.log("✅ Fuel Database (MySQL) Connected Successfully!");
-    connection.release();
+
+    // run initialization queries to ensure tables/columns exist
+    // create tables if they don't already exist
+    const createUsers = `
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        phone VARCHAR(15) NULL,
+        address TEXT NULL
+      );
+    `;
+
+    const createProducts = `
+      CREATE TABLE IF NOT EXISTS products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        price DECIMAL(10,2) NOT NULL,
+        stock_quantity INT DEFAULT 0
+      );
+    `;
+
+    const createOrders = `
+      CREATE TABLE IF NOT EXISTS orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        product_id INT NOT NULL,
+        quantity INT NOT NULL,
+        total_price DECIMAL(10,2) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (product_id) REFERENCES products(id)
+      );
+    `;
+
+    // execute create table statements sequentially
+    db.query(createUsers, (err) => {
+      if (err) console.error('❌ CREATE TABLE users error:', err.sqlMessage || err);
+      // attempt to add phone/address if missing (ignore errors if already there)
+      db.query('ALTER TABLE users ADD COLUMN phone VARCHAR(15) NULL', (colErr) => {
+        if (colErr && colErr.code !== 'ER_DUP_FIELDNAME' && colErr.code !== 'ER_CANT_DROP_FIELD_OR_KEY') {
+          console.error('❌ ADD COLUMN phone error:', colErr.sqlMessage || colErr);
+        }
+        db.query('ALTER TABLE users ADD COLUMN address TEXT NULL', (colErr2) => {
+          if (colErr2 && colErr2.code !== 'ER_DUP_FIELDNAME' && colErr2.code !== 'ER_CANT_DROP_FIELD_OR_KEY') {
+            console.error('❌ ADD COLUMN address error:', colErr2.sqlMessage || colErr2);
+          }
+          // continue with other tables after user modifications
+          db.query(createProducts, (prodErr) => {
+            if (prodErr) console.error('❌ CREATE TABLE products error:', prodErr.sqlMessage || prodErr);
+            db.query(createOrders, (ordErr) => {
+              if (ordErr) console.error('❌ CREATE TABLE orders error:', ordErr.sqlMessage || ordErr);
+              else console.log('✅ Database schema ensured (tables/columns created)');
+              connection.release();
+            });
+          });
+        });
+      });
+    });
   }
 });
 
