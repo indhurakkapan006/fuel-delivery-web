@@ -136,11 +136,31 @@ const verifyToken = (req, res, next) => {
 app.post('/api/signup', async (req, res) => {
   const { username, email, password, phone, address } = req.body;
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const sql = "INSERT INTO users (username, email, password, phone, address) VALUES (?, ?, ?, ?, ?)";
-    db.query(sql, [username, email, hashedPassword, phone || null, address || null], (err, result) => {
-      if (err) return res.status(500).json({ error: err.sqlMessage });
-      res.status(201).json({ message: "User registered!" });
+    // basic validation
+    if (!username || !email || !password) return res.status(400).json({ message: 'Missing required fields' });
+
+    // Check whether email is already registered
+    db.query('SELECT id FROM users WHERE email = ?', [email], async (selectErr, selectRes) => {
+      if (selectErr) {
+        console.error('Signup select error:', selectErr);
+        return res.status(500).json({ error: selectErr.sqlMessage || 'Database error' });
+      }
+
+      if (selectRes && selectRes.length > 0) {
+        // Email already exists - reject regardless of username
+        return res.status(400).json({ message: 'Email already registered' });
+      }
+
+      // Proceed to create new user
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const sql = "INSERT INTO users (username, email, password, phone, address) VALUES (?, ?, ?, ?, ?)";
+      db.query(sql, [username, email, hashedPassword, phone || null, address || null], (err, result) => {
+        if (err) {
+          if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ message: 'Email already registered' });
+          return res.status(500).json({ error: err.sqlMessage });
+        }
+        res.status(201).json({ message: "User registered!" });
+      });
     });
   } catch (error) {
     res.status(500).json({ error: "Server error" });
