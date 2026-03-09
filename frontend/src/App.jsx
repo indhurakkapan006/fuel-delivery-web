@@ -5,21 +5,25 @@ import Home from './pages/Home';
 import Auth from './pages/Auth';
 import Cart from './pages/Cart';
 import Orders from './pages/Orders';
+import Profile from './pages/Profile';
+import { PopupProvider } from './contexts/PopupContext';
 
 function App() {
   return (
-    <Router>
-      <Navbar />
-      <div style={{ padding: '20px' }}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/profile" element={<div>Your Profile</div>} />
-        </Routes>
-      </div>
-    </Router>
+    <PopupProvider>
+      <Router>
+        <Navbar />
+        <div style={{ padding: '20px' }}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/profile" element={<Profile />} />
+          </Routes>
+        </div>
+      </Router>
+    </PopupProvider>
   );
 }
 

@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const API = axios.create({ baseURL: 'https://fuel-delivery-backend-ksip.onrender.com/api' });
+// Use local backend for development, deployed backend for production
+const API = axios.create({ 
+  baseURL: process.env.NODE_ENV === 'production' 
+    ? 'https://fuel-delivery-backend-ksip.onrender.com/api'
+    : 'http://localhost:5000/api'
+});
 
 // Add token to requests if available
 API.interceptors.request.use((config) => {

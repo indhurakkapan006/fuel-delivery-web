@@ -12,7 +12,8 @@ app.use(express.json());
 const allowedOrigins = [
   'https://fuel-delivery-frontend.vercel.app',
   'https://fuel-delivery-frontend-hrkaa7yo0-esakkimuthus-projects.vercel.app',
-  'http://localhost:5174' // Keeping local dev support
+  'http://localhost:5173', // Local dev - Vite frontend
+  'http://localhost:5174'  // Local dev - alternate port
 ];
 
 app.use(cors({
@@ -140,15 +141,17 @@ app.post('/api/signup', async (req, res) => {
     if (!username || !email || !password) return res.status(400).json({ message: 'Missing required fields' });
 
     // Check whether email is already registered
-    db.query('SELECT id FROM users WHERE email = ?', [email], async (selectErr, selectRes) => {
+    db.query('SELECT id FROM users WHERE email = ? OR username = ?', [email, username], async (selectErr, selectRes) => {
       if (selectErr) {
         console.error('Signup select error:', selectErr);
         return res.status(500).json({ error: selectErr.sqlMessage || 'Database error' });
       }
 
       if (selectRes && selectRes.length > 0) {
-        // Email already exists - reject regardless of username
-        return res.status(400).json({ message: 'Email already registered' });
+        // Check what field caused the duplicate
+        const existingUser = selectRes[0];
+        // We can't easily check which field caused the duplicate, so return a generic message
+        return res.status(400).json({ message: 'Username or email already registered' });
       }
 
       // Proceed to create new user
@@ -156,7 +159,15 @@ app.post('/api/signup', async (req, res) => {
       const sql = "INSERT INTO users (username, email, password, phone, address) VALUES (?, ?, ?, ?, ?)";
       db.query(sql, [username, email, hashedPassword, phone || null, address || null], (err, result) => {
         if (err) {
-          if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ message: 'Email already registered' });
+          if (err.code === 'ER_DUP_ENTRY') {
+            if (err.sqlMessage.includes('username')) {
+              return res.status(400).json({ message: 'Username already taken' });
+            } else if (err.sqlMessage.includes('email')) {
+              return res.status(400).json({ message: 'Email already registered' });
+            } else {
+              return res.status(400).json({ message: 'Username or email already registered' });
+            }
+          }
           return res.status(500).json({ error: err.sqlMessage });
         }
         res.status(201).json({ message: "User registered!" });
